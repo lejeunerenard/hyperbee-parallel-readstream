@@ -133,7 +133,7 @@ async function parallelReadStream (directory, db, range) {
   console.log('userEnd.compare(keyspaceEnd)', userEnd.compare(keyspaceEnd))
   console.log('start', start, 'end', end)
 
-  // const diff = lexigraphicMidPoint(start, end)
+  // const diff = lexicographicMidPoint(start, end)
   const diff = bytewiseSubtract(start, end)
   console.log('diff', diff)
   const inc = bytewiseDivide(diff, numRun)

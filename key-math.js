@@ -1,6 +1,6 @@
 import b4a from 'b4a'
 
-export function lexigraphicMidPoint (low, high) {
+export function lexicographicMidPoint (low, high) {
   const bytes = []
   let carry = 0
   for (let i = 0; i < high.length; i++) {
