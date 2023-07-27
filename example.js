@@ -1,9 +1,10 @@
 import Hypercore from 'hypercore'
 import equal from 'fast-deep-equal'
 import { HyperbeeParallel } from './index.js'
+import { pack } from 'lexicographic-integer'
 
 const directory = './bee'
-const core = new Hypercore(directory, { unlocked: true })
+const core = new Hypercore(directory)
 
 // // TODO Test with corestore version
 // const core = store.get({ name: 'bee' })
@@ -11,19 +12,19 @@ const db = new HyperbeeParallel(core, { keyEncoding: 'utf-8', valueEncoding: 'js
 
 await db.ready()
 console.log('db.version', db.version)
-console.log('core.writable', core.writable)
 
 const INIT = db.version === 1
 if (INIT) {
   for (let i = 0; i < 1_000_000; i++) {
-    await db.put('key' + i, { i })
+    const key = 'key' + pack(i, 'hex')
+    await db.put(key, { i })
     if (i % 10_000 === 0) {
       console.log('i', i)
     }
   }
 }
 
-const range = { lt: 'keya', gte: 'key' }
+const range = { lt: 'keyg', gte: 'key' }
 
 console.time('read-parallel')
 const nodes = await db.parallelReadStream(directory, range)
