@@ -1,4 +1,5 @@
 import Hyperbee from 'hyperbee'
+import RAF from 'random-access-file'
 import { getNextKeyBySplitting } from './split-range.js'
 
 import WorkerPool from './worker-pool.js'
@@ -10,9 +11,20 @@ export class HyperbeeParallel extends Hyperbee {
     this.originalOpts = opts
 
     this.numThreads = opts.numThreads || os.cpus().length
+
+    // Check storage
+    if (this.core.storage instanceof Function) {
+      const fakeDirStorage = this.core.storage('') // blank string
+
+      if (!(fakeDirStorage instanceof RAF)) {
+        throw Error('HyperbeeParallel requires it\'s hypercore have a RandomAccessFile type storage')
+      }
+
+      this.directory = fakeDirStorage.directory
+    }
   }
 
-  async parallelReadStream (directory, range) {
+  async parallelReadStream (range) {
     const pool = new WorkerPool(this.numThreads)
 
     const version = this.version
@@ -45,7 +57,7 @@ export class HyperbeeParallel extends Hyperbee {
           // TODO Pass all relevant options for threads in a transferable format
           dbOpts: this.originalOpts,
           version,
-          directory,
+          directory: this.directory,
           range: rangeSplit
         }, (err, msg) => {
           console.log(rangeSplit, err, msg.length || null)

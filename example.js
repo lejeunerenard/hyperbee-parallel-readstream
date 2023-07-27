@@ -3,8 +3,7 @@ import equal from 'fast-deep-equal'
 import { HyperbeeParallel } from './index.js'
 import { pack } from 'lexicographic-integer'
 
-const directory = './bee'
-const core = new Hypercore(directory)
+const core = new Hypercore('./bee')
 
 // // TODO Test with corestore version
 // const core = store.get({ name: 'bee' })
@@ -26,8 +25,12 @@ if (INIT) {
 
 const range = { lt: 'keyg', gte: 'key' }
 
+db.put('should locked?')
 console.time('read-parallel')
-const nodes = await db.parallelReadStream(directory, range)
+const readPromise = db.parallelReadStream(range)
+db.put('unlocked?')
+console.log('after unlocked')
+const nodes = await readPromise
 console.timeEnd('read-parallel')
 console.log('nodes.length', nodes.length)
 
