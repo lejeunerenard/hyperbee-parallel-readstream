@@ -20,7 +20,8 @@ export class HyperbeeParallel extends Hyperbee {
         throw Error('HyperbeeParallel requires it\'s hypercore have a RandomAccessFile type storage')
       }
 
-      this.directory = fakeDirStorage.directory
+      // TODO Determine if the trailing `/` is ever a `\` for windows
+      this.directory = fakeDirStorage.filename.replace(/\/$/, '')
     }
   }
 

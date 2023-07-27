@@ -1,12 +1,12 @@
-import Hypercore from 'hypercore'
 import equal from 'fast-deep-equal'
 import { HyperbeeParallel } from './index.js'
 import { pack } from 'lexicographic-integer'
+import Corestore from 'corestore'
 
-const core = new Hypercore('./bee')
+const store = new Corestore('store')
+const core = store.get({ name: 'bee' })
+await core.ready()
 
-// // TODO Test with corestore version
-// const core = store.get({ name: 'bee' })
 const db = new HyperbeeParallel(core, { keyEncoding: 'utf-8', valueEncoding: 'json' })
 
 await db.ready()
