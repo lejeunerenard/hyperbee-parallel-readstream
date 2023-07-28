@@ -10,7 +10,7 @@ const d = {
 const SEP = b4a.alloc(1)
 const EMPTY = b4a.alloc(0)
 
-async function trimKeySpace (db, range) {
+export async function trimKeySpace (db, range) {
   // TODO See if there is something in hyperbee I can piggy back on for encoding
   const userStart = db.keyEncoding.encode(range.gte || range.gt)
   const userEnd = db.keyEncoding.encode(range.lte || range.lt)
@@ -83,10 +83,11 @@ async function splitKeysFromBTree (db, range, targetNumber) {
 
 // Recurse following valid children, accumlating keys until roughly the initial
 // `numberRemaining` is met or exceeded
-async function getKeysFromTree (node, range, numberRemaining) {
+export async function getKeysFromTree (node, range, numberRemaining) {
   const _lKey = range.lte || null
   const _gKey = range.gte || null
 
+  d.treeTransversal('lowerbound', _gKey, 'upperbound', _lKey)
   d.treeTransversal('node\'s # of keys', node.keys.length)
 
   let c
@@ -119,7 +120,9 @@ async function getKeysFromTree (node, range, numberRemaining) {
       } else {
         // Found a key in between
         keys.push(key)
-        pursueable.push(i)
+        if (i < node.children.length) {
+          pursueable.push(i)
+        }
       }
     } else {
       d.treeTransversal('found key below starting')
@@ -128,7 +131,10 @@ async function getKeysFromTree (node, range, numberRemaining) {
     }
   }
 
-  if (!greaterThanOrEqualToUpperBound) pursueable.push(keys.length)
+  // All keys must be lower than upper bound, so include last (highest) child
+  if (!greaterThanOrEqualToUpperBound && node.children.length) {
+    pursueable.push(node.children.length - 1)
+  }
 
   if (keys.length) {
     maxDepth = 1
@@ -140,7 +146,9 @@ async function getKeysFromTree (node, range, numberRemaining) {
     const numberOfKeysPerChild = (numberRemaining - keys.length) / pursueable.length
     let maxChildDepth = 0
     d.treeTransversal('pursueable.length', pursueable.length)
+    d.treeTransversal('children.length', node.children.length)
     for (const childIndex of pursueable) {
+      d.treeTransversal('checking child', childIndex)
       const child = await node.getChildNode(childIndex)
       const [childMaxDepth, childKeys] = await getKeysFromTree(child, range, numberOfKeysPerChild)
       maxChildDepth = Math.max(maxChildDepth, childMaxDepth)
