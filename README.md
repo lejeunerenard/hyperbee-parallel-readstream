@@ -15,10 +15,13 @@ import { HyperbeeParallel } from './index.js'
 const db = new HyperbeeParallel(core, {
   keyEncoding: 'utf-8',
   valueEncoding: 'json'
-  })
+})
 const range = { gte: 'beep', lt: 'boop' }
 const nodes = await db.parallelReadStream(range)
 ```
+
+See [`example.js`](example.js) for an example on a large data set (1 million
+keys).
 
 ## TODO
 
