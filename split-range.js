@@ -1,5 +1,11 @@
 import b4a from 'b4a'
+import debug from 'debug'
 import { bytewiseSubtract, bytewiseDivide, bytewiseAddition } from './key-math.js'
+
+const d = {
+  results: debug('split-range:results'),
+  treeTransversal: debug('split-range:tree-transversal')
+}
 
 const SEP = b4a.alloc(1)
 const EMPTY = b4a.alloc(0)
@@ -39,87 +45,113 @@ export async function * getNextKeyBySplitting (db, range, targetNumber) {
   }
 }
 
-// TODO Walk the rest of the tree, currently only walks to the 'starting' node
 export async function * getNextKeyFromBTree (db, range, targetNumber) {
   const trimed = await trimKeySpace(db, range)
-  const keys = await splitKeysFromBTree(db, trimed)
+  const keys = await splitKeysFromBTree(db, trimed, targetNumber)
+  d.results('keys length', keys.length)
   const carry = Buffer.allocUnsafe(keys[0].byteLength).fill(0)
   keys[0].copy(carry)
   keys.push(trimed.lte)
-  for (let i = 1; i < keys.length; i++) {
+  for (let i = 0; i < keys.length; i++) {
     yield keys[i]
   }
 }
 
-// async function renderKeys (treeNode) {
-//   for (let i = 0; i < treeNode.keys.length; i++) {
-//     console.log('i', (await treeNode.getKey(i)).toString())
-//   }
-//   console.log('treeNode.children.length', treeNode.children.length)
-// }
-
-export async function splitKeysFromBTree (db, range) {
+async function splitKeysFromBTree (db, range, targetNumber) {
   // Use b-tree for divvying ranges
   const batch = db.batch()
   const root = await batch.getRoot(false)
-  const stack = await getKeysFromTree(root, encRange(db.keyEncoding, range))
+  const [totalMaxDepth, stack] = await getKeysFromTree(root, encRange(db.keyEncoding, range), targetNumber)
 
-  return stack.flatMap(({ node }) => node.keys
-    .filter((key) => !!key.value).map((key) => key.value))
-    .sort(b4a.compare)
+  d.results('initial unsorted stack', stack, 'length', stack.length)
+
+  if (b4a.compare(range.gte, stack[0]) < 0) {
+    d.results('adding gte')
+    stack.unshift(range.gte)
+  }
+
+  if (b4a.compare(range.lte, stack[stack.length - 1]) > 0) {
+    d.results('adding lte')
+    stack.push(range.lte)
+  }
+
+  d.results('totalMaxDepth', totalMaxDepth)
+
+  const sorted = stack.sort(b4a.compare)
+  return sorted
 }
 
-// Might need a different approach as this walks to the 'start' node. A better
-// approach might be fanning out from the root until including a) enough nodes
-// for the number of threads to be run, b) including the entire range.
-async function getKeysFromTree (node, range) {
-  const _reverse = !!range.reverse
-  const _lIncl = !range.lt
-  const _gIncl = !range.gt
-  const _lKey = range.lt || range.lte || null
-  const _gKey = range.gt || range.gte || null
+// Recurse following valid children, accumlating keys until roughly the initial
+// `numberRemaining` is met or exceeded
+async function getKeysFromTree (node, range, numberRemaining) {
+  const _lKey = range.lte || null
+  const _gKey = range.gte || null
 
-  const incl = _reverse ? _lIncl : _gIncl
-  const start = _reverse ? _lKey : _gKey
-  const stack = []
+  d.treeTransversal('node\'s # of keys', node.keys.length)
 
-  if (!start) {
-    stack.push({ node, i: _reverse ? node.keys.length << 1 : 0 })
-    return stack
-  }
+  let c
+  let maxDepth = 0
 
-  while (true) {
-    const entry = { node, i: _reverse ? node.keys.length << 1 : 0 }
+  const keys = []
+  const pursueable = []
 
-    let s = 0
-    let e = node.keys.length
-    let c
-
-    while (s < e) {
-      const mid = (s + e) >> 1
-      c = b4a.compare(start, await node.getKey(mid))
-
+  let greaterThanOrEqualToUpperBound = false
+  for (let i = 0; i < node.keys.length; i++) {
+    const key = (await node.getKey(i))
+    d.treeTransversal('checking key', key)
+    c = b4a.compare(_gKey, key)
+    if (c === 0) {
+      // Found starting key
+      keys.push(_gKey)
+    } else if (c < 0) {
+      c = b4a.compare(_lKey, key)
       if (c === 0) {
-        if (incl) entry.i = mid * 2 + 1
-        else entry.i = mid * 2 + (_reverse ? 0 : 2)
-        stack.push(entry)
-        return stack
+        greaterThanOrEqualToUpperBound = true
+        // Found ending key
+        keys.push(key)
+        break
+      } else if (c < 0) {
+        // Found a key out of range
+        // Mark correspond child for perusal, but flag out of bounds
+        greaterThanOrEqualToUpperBound = true
+        pursueable.push(i)
+        break
+      } else {
+        // Found a key in between
+        keys.push(key)
+        pursueable.push(i)
       }
-
-      if (c < 0) e = mid
-      else s = mid + 1
+    } else {
+      d.treeTransversal('found key below starting')
+      // TODO
+      continue
     }
-
-    const i = c < 0 ? e : s
-    entry.i = 2 * i + (_reverse ? -1 : 1)
-
-    if (entry.i >= 0 && entry.i <= (node.keys.length << 1)) stack.push(entry)
-    if (!node.children.length) {
-      return stack
-    }
-
-    node = await node.getChildNode(i)
   }
+
+  if (!greaterThanOrEqualToUpperBound) pursueable.push(keys.length)
+
+  if (keys.length) {
+    maxDepth = 1
+  }
+
+  // Pursue
+  d.treeTransversal('keys.length < numberRemaining', keys.length < numberRemaining, 'keys.length', keys.length, 'numberRemaining', numberRemaining)
+  if (keys.length < numberRemaining) {
+    const numberOfKeysPerChild = (numberRemaining - keys.length) / pursueable.length
+    let maxChildDepth = 0
+    d.treeTransversal('pursueable.length', pursueable.length)
+    for (const childIndex of pursueable) {
+      const child = await node.getChildNode(childIndex)
+      const [childMaxDepth, childKeys] = await getKeysFromTree(child, range, numberOfKeysPerChild)
+      maxChildDepth = Math.max(maxChildDepth, childMaxDepth)
+      keys.push(...childKeys)
+    }
+
+    maxDepth += maxChildDepth
+  }
+
+  d.treeTransversal('maxDepth', maxDepth, 'numberRemaining', numberRemaining)
+  return [maxDepth, keys]
 }
 
 function encRange (e, opts) {

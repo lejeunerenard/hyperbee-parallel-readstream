@@ -3,7 +3,10 @@ import { HyperbeeParallel } from './index.js'
 import { pack } from 'lexicographic-integer'
 import Corestore from 'corestore'
 
-const store = new Corestore('store')
+const KEY_SPACE_STYLE = 0 // 0 = numbers as strings (more even) 1 = lexicographic number ordering
+
+const storeDir = KEY_SPACE_STYLE === 0 ? 'store-string-number' : 'store-lexicographic-number'
+const store = new Corestore(storeDir)
 const core = store.get({ name: 'bee' })
 await core.ready()
 
@@ -15,7 +18,7 @@ console.log('db.version', db.version)
 const INIT = db.version === 1
 if (INIT) {
   for (let i = 0; i < 1_000_000; i++) {
-    const key = 'key' + pack(i, 'hex')
+    const key = 'key' + KEY_SPACE_STYLE === 0 ? i : pack(i, 'hex')
     await db.put(key, { i })
     if (i % 10_000 === 0) {
       console.log('i', i)
@@ -25,12 +28,8 @@ if (INIT) {
 
 const range = { lt: 'keyg', gte: 'key' }
 
-db.put('should locked?')
 console.time('read-parallel')
-const readPromise = db.parallelReadStream(range)
-db.put('unlocked?')
-console.log('after unlocked')
-const nodes = await readPromise
+const nodes = await db.parallelReadStream(range)
 console.timeEnd('read-parallel')
 console.log('nodes.length', nodes.length)
 

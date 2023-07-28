@@ -1,6 +1,6 @@
 import Hyperbee from 'hyperbee'
 import RAF from 'random-access-file'
-import { getNextKeyBySplitting } from './split-range.js'
+import { getNextKeyFromBTree } from './split-range.js'
 
 import WorkerPool from './worker-pool.js'
 import os from 'node:os'
@@ -33,7 +33,7 @@ export class HyperbeeParallel extends Hyperbee {
 
     const snapshot = this.checkout(version)
 
-    const keyIter = getNextKeyBySplitting(snapshot, range, numRun)
+    const keyIter = getNextKeyFromBTree(snapshot, range, numRun)
     let carry = (await keyIter.next()).value
 
     const tasks = []
@@ -61,7 +61,6 @@ export class HyperbeeParallel extends Hyperbee {
           directory: this.directory,
           range: rangeSplit
         }, (err, msg) => {
-          console.log(rangeSplit, err, msg.length || null)
           if (!err) return resolve(msg)
           reject(err)
         })
