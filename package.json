@@ -1,5 +1,5 @@
 {
-  "name": "hyperbee-parallel-reading",
+  "name": "@lejeunerenard/hyperbee-parallel-readstream",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
