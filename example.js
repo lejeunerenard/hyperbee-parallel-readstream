@@ -3,10 +3,11 @@ import { HyperbeeParallel } from './index.js'
 import { pack } from 'lexicographic-integer'
 import Corestore from 'corestore'
 
-const KEY_SPACE_STYLE = 0 // 0 = numbers as strings (more even) 1 = lexicographic number ordering
+const KEY_SPACE_STYLE = 1 // 0 = numbers as strings (more even) 1 = lexicographic number ordering
+const COMPLEX_VALUES = true
 
 const storeDir = KEY_SPACE_STYLE === 0 ? 'store-string-number' : 'store-lexicographic-number'
-const store = new Corestore(storeDir)
+const store = new Corestore(storeDir + (COMPLEX_VALUES ? '-complex' : ''))
 const core = store.get({ name: 'bee' })
 await core.ready()
 
@@ -18,10 +19,11 @@ console.log('db.version', db.version)
 const INIT = db.version === 1
 if (INIT) {
   for (let i = 0; i < 1_000_000; i++) {
-    const key = 'key' + KEY_SPACE_STYLE === 0 ? i : pack(i, 'hex')
-    await db.put(key, { i })
+    const key = 'key' + (KEY_SPACE_STYLE === 0 ? i : pack(i, 'hex'))
+    const value = COMPLEX_VALUES ? { i, foo: { bar: 10, biz: true, baz: { b: { c: { word: '12038arsitenadrlyahrstokarstiehastjkl' } } } } } : { i }
+    await db.put(key, value)
     if (i % 10_000 === 0) {
-      console.log('i', i)
+      console.log('i', i, 'key', key)
     }
   }
 }
