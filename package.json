@@ -1,7 +1,7 @@
 {
   "name": "@lejeunerenard/hyperbee-parallel-readstream",
   "version": "1.0.0",
-  "description": "",
+  "description": "Add support for reading hyperbee nodes in parallel for larger sets of nodes.",
   "main": "index.js",
   "type": "module",
   "scripts": {
