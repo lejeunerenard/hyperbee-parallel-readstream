@@ -1,5 +1,5 @@
 import equal from 'fast-deep-equal'
-import { HyperbeeParallel } from './index.js'
+import HyperbeeParallel from './index.js'
 import { pack } from 'lexicographic-integer'
 import Corestore from 'corestore'
 

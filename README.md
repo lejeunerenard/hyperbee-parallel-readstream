@@ -10,7 +10,7 @@ faster reading of nodes on larger databases & ranges.
 ## Usage
 
 ```js
-import { HyperbeeParallel } from './index.js'
+import { HyperbeeParallel } from '@lejeunerenard/hyperbee-parallel-readstream'
 
 const db = new HyperbeeParallel(core, {
   keyEncoding: 'utf-8',

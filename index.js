@@ -5,7 +5,7 @@ import { getNextKeyFromBTree } from './split-range.js'
 import WorkerPool from './worker-pool.js'
 import os from 'node:os'
 
-export class HyperbeeParallel extends Hyperbee {
+export default class HyperbeeParallel extends Hyperbee {
   constructor (core, opts = {}) {
     super(core, opts)
     this.originalOpts = opts
