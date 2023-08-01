@@ -15,17 +15,9 @@ parentPort.on('message', async ({ dbOpts, version, directory, range }) => {
   if ('gte' in range) range.gte = b4a.from(range.gte)
 
   // console.log('range', range)
-
-  // Collect then send
-  const nodes = []
   for await (const node of snap.createReadStream(range)) {
-    nodes.push(node)
+    parentPort.postMessage({ event: 'node', node })
   }
-  parentPort.postMessage(nodes)
 
-  // for await (const node of snap.createReadStream(range)) {
-  //   parentPort.postMessage({ event: 'node', node })
-  // }
-
-  // parentPort.postMessage({ event: 'done' })
+  parentPort.postMessage({ event: 'done' })
 })

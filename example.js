@@ -31,7 +31,10 @@ if (INIT) {
 const range = { lt: 'keyg', gte: 'key' }
 
 console.time('read-parallel')
-const nodes = await db.parallelReadStream(range)
+const nodes = []
+for await (const node of db.parallelReadStream(range)) {
+  nodes.push(node)
+}
 console.timeEnd('read-parallel')
 console.log('nodes.length', nodes.length)
 

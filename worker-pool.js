@@ -13,7 +13,9 @@ class WorkerPoolTaskInfo extends AsyncResource {
 
   done (err, result) {
     this.runInAsyncScope(this.callback, null, err, result)
-    this.emitDestroy() // `TaskInfo`s are used only once.
+    if (result.event === 'done') {
+      this.emitDestroy() // `TaskInfo`s are used only once.
+    }
   }
 }
 
@@ -41,13 +43,16 @@ export default class WorkerPool extends EventEmitter {
   addNewWorker () {
     const worker = new Worker(new URL(this.workerScript, import.meta.url))
     worker.on('message', (result) => {
-      // In case of success: Call the callback that was passed to `runTask`,
-      // remove the `TaskInfo` associated with the Worker, and mark it as free
-      // again.
       worker[kTaskInfo].done(null, result)
-      worker[kTaskInfo] = null
-      this.freeWorkers.push(worker)
-      this.emit(kWorkerFreedEvent)
+
+      if (result.event === 'done') {
+        // In case of success: Call the callback that was passed to `runTask`,
+        // remove the `TaskInfo` associated with the Worker, and mark it as free
+        // again.
+        worker[kTaskInfo] = null
+        this.freeWorkers.push(worker)
+        this.emit(kWorkerFreedEvent)
+      }
     })
     worker.on('error', (err) => {
       // In case of an uncaught exception: Call the callback that was passed to

@@ -25,7 +25,7 @@ export default class HyperbeeParallel extends Hyperbee {
     }
   }
 
-  async parallelReadStream (range, workerScriptFilepath, workerOpts) {
+  async * parallelReadStream (range, workerScriptFilepath, workerOpts) {
     const pool = new WorkerPool(this.numThreads, workerScriptFilepath)
 
     const version = this.version
@@ -37,6 +37,8 @@ export default class HyperbeeParallel extends Hyperbee {
     let carry = (await keyIter.next()).value
 
     const tasks = []
+    let resolve
+    const values = [new Promise((_resolve) => { resolve = _resolve })]
     let firstRange = true
     for await (const higher of keyIter) {
       const rangeSplit = { ...range }
@@ -53,7 +55,7 @@ export default class HyperbeeParallel extends Hyperbee {
         throw Error('wrong order')
       }
 
-      tasks.push(new Promise((resolve, reject) => {
+      tasks.push(new Promise((_resolve, reject) => {
         pool.runTask({
           ...workerOpts,
           // TODO Pass all relevant options for threads in a transferable format
@@ -62,16 +64,31 @@ export default class HyperbeeParallel extends Hyperbee {
           directory: this.directory,
           range: rangeSplit
         }, (err, msg) => {
-          if (!err) return resolve(msg)
-          reject(err)
+          if (!err) {
+            if (msg.event === 'done') return _resolve()
+            if (msg.event === 'node') {
+              resolve([msg.node, false])
+              return values.push(new Promise((_resolve) => { resolve = _resolve }))
+            }
+          }
+
+          throw err
         })
       }))
 
       carry = higher
     }
 
-    return Promise.all(tasks)
-      .then((results) => results.flat())
+    // Fire last resolve when all 'tasks' are done
+    Promise.all(tasks)
+      .then(() => { resolve([null, true]) })
       .finally(pool.close.bind(pool))
+
+    let val
+    for (let i = 0, done = false; !done; i++) {
+      [val, done] = await values[i]
+      delete values[i]
+      if (!done) yield val
+    }
   }
 }
