@@ -25,8 +25,8 @@ export default class HyperbeeParallel extends Hyperbee {
     }
   }
 
-  async parallelReadStream (range) {
-    const pool = new WorkerPool(this.numThreads)
+  async parallelReadStream (range, workerScriptFilepath, workerOpts) {
+    const pool = new WorkerPool(this.numThreads, workerScriptFilepath)
 
     const version = this.version
     const numRun = this.numThreads
@@ -55,6 +55,7 @@ export default class HyperbeeParallel extends Hyperbee {
 
       tasks.push(new Promise((resolve, reject) => {
         pool.runTask({
+          ...workerOpts,
           // TODO Pass all relevant options for threads in a transferable format
           dbOpts: this.originalOpts,
           version,

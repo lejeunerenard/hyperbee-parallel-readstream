@@ -18,12 +18,13 @@ class WorkerPoolTaskInfo extends AsyncResource {
 }
 
 export default class WorkerPool extends EventEmitter {
-  constructor (numThreads) {
+  constructor (numThreads, workerScript = 'read-range.js') {
     super()
     this.numThreads = numThreads
     this.workers = []
     this.freeWorkers = []
     this.tasks = []
+    this.workerScript = workerScript
 
     for (let i = 0; i < numThreads; i++) { this.addNewWorker() }
 
@@ -38,7 +39,7 @@ export default class WorkerPool extends EventEmitter {
   }
 
   addNewWorker () {
-    const worker = new Worker(new URL('read-range.js', import.meta.url))
+    const worker = new Worker(new URL(this.workerScript, import.meta.url))
     worker.on('message', (result) => {
       // In case of success: Call the callback that was passed to `runTask`,
       // remove the `TaskInfo` associated with the Worker, and mark it as free
