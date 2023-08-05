@@ -17,7 +17,9 @@ const db = new HyperbeeParallel(core, {
   valueEncoding: 'json'
 })
 const range = { gte: 'beep', lt: 'boop' }
-const nodes = await db.parallelReadStream(range)
+for await (const node of db.parallelReadStream(range)) {
+  console.log(node)
+}
 ```
 
 See [`example.js`](example.js) for an example on a large data set (1 million
@@ -26,6 +28,5 @@ keys).
 ## TODO
 
 - [ ] Add support for `createReadStream()`'s second argument `opt`
-- [ ] Add streaming support from workers
-- [ ] Add async interator interface (likely returning keys out of order)
+- [ ] Add support for limit being distributed on workers
 - [ ] Further test how keys are split based on `hyperbee`'s b-tree
