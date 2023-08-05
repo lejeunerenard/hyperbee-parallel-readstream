@@ -9,6 +9,16 @@ const putInOrder = async (db, keys) =>
   Promise.resolve())
 
 test('split-range', (t) => {
+  t.test('trimKeySpace', (t) => {
+    t.test('undefined bounds return null', async (t) => {
+      // Construct b-tree
+      const db = await createDB()
+      const trimmedRange = await trimKeySpace(db, {})
+      t.equal(trimmedRange.lte, null)
+      t.equal(trimmedRange.gte, null)
+    })
+  })
+
   t.test('gets only lower bound key when its the highest key', async (t) => {
     // Construct b-tree
     const db = await createDB()
@@ -143,6 +153,42 @@ test('split-range', (t) => {
     const [, keys] = await getKeysFromTree(root, trimmedRange, 4)
     t.deepEqual(keys, [
       b4a.from('key2'), // first split key
+      b4a.from('key0'), // first child keys
+      b4a.from('key1'), // first child keys
+      b4a.from('key3'), // second child keys
+      b4a.from('key4'), // second child keys
+      b4a.from('key5'), // second child keys
+      b4a.from('key6'), // second child keys
+      b4a.from('key7') // second child keys
+    ], 'found expected keys')
+  })
+
+  t.test('finds keys w/ empty range', async (t) => {
+    // Construct b-tree
+    const db = await createDB()
+
+    const range = {}
+    await db.put('kexe')
+    await db.put('kexf')
+    await db.put('key0')
+    await db.put('key1')
+    await db.put('key2') // <- key of first split
+    await db.put('key3')
+    await db.put('key4')
+    await db.put('key5')
+    await db.put('key6')
+    await db.put('key7')
+
+    const batch = db.batch()
+    const root = await batch.getRoot(false)
+
+    // getKeysFromTree requires defined & trimmed key space
+    const trimmedRange = await trimKeySpace(db, range)
+    const [, keys] = await getKeysFromTree(root, trimmedRange, 4)
+    t.deepEqual(keys, [
+      b4a.from('key2'), // first split key
+      b4a.from('kexe'), // first child keys
+      b4a.from('kexf'), // first child keys
       b4a.from('key0'), // first child keys
       b4a.from('key1'), // first child keys
       b4a.from('key3'), // second child keys

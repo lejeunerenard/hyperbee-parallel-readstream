@@ -25,7 +25,7 @@ export default class HyperbeeParallel extends Hyperbee {
     }
   }
 
-  async * parallelReadStream (range, workerScriptFilepath, workerOpts) {
+  async * parallelReadStream (range = {}, workerScriptFilepath, workerOpts) {
     const pool = new WorkerPool(this.numThreads, workerScriptFilepath)
 
     const version = this.version

@@ -11,17 +11,20 @@ const SEP = b4a.alloc(1)
 const EMPTY = b4a.alloc(0)
 
 export async function trimKeySpace (db, range) {
+  const _gKey = range.gte || range.gt
+  const _lKey = range.lte || range.lt
   // TODO See if there is something in hyperbee I can piggy back on for encoding
-  const userStart = db.keyEncoding.encode(range.gte || range.gt)
-  const userEnd = db.keyEncoding.encode(range.lte || range.lt)
+  const userStart = _gKey ? db.keyEncoding.encode(_gKey) : null
+  const userEnd = _lKey ? db.keyEncoding.encode(_lKey) : null
 
-  const { key: keyspaceStartStr } = await db.peek({ ...range, reverse: false })
-  const { key: keyspaceEndStr } = await db.peek({ ...range, reverse: true })
-  const keyspaceStart = b4a.from(keyspaceStartStr)
-  const keyspaceEnd = b4a.from(keyspaceEndStr)
+  const keyspaceStartNode = await db.peek({ ...range, reverse: false })
+  const keyspaceStart = keyspaceStartNode ? b4a.from(keyspaceStartNode.key) : null
 
-  const start = userStart.compare(keyspaceStart) > 0 ? userStart : keyspaceStart
-  const end = userEnd.compare(keyspaceEnd) > 0 ? keyspaceEnd : userEnd
+  const keyspaceEndNode = await db.peek({ ...range, reverse: true })
+  const keyspaceEnd = keyspaceEndNode ? b4a.from(keyspaceEndNode.key) : null
+
+  const start = userStart && userStart.compare(keyspaceStart) > 0 ? userStart : keyspaceStart
+  const end = !userEnd || userEnd.compare(keyspaceEnd) > 0 ? keyspaceEnd : userEnd
 
   const trimmedRange = { ...range, gte: start, lte: end }
   delete trimmedRange.lt
@@ -100,12 +103,12 @@ export async function getKeysFromTree (node, range, numberRemaining) {
   for (let i = 0; i < node.keys.length; i++) {
     const key = (await node.getKey(i))
     d.treeTransversal('checking key', key)
-    c = b4a.compare(_gKey, key)
+    c = _gKey ? b4a.compare(_gKey, key) : -1
     if (c === 0) {
       // Found starting key
       keys.push(_gKey)
     } else if (c < 0) {
-      c = b4a.compare(_lKey, key)
+      c = _lKey ? b4a.compare(_lKey, key) : 1
       if (c === 0) {
         greaterThanOrEqualToUpperBound = true
         // Found ending key
