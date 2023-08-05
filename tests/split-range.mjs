@@ -1,9 +1,7 @@
 import test from 'tape'
-import RAM from 'random-access-memory'
-import Hypercore from 'hypercore'
-import Hyperbee from 'hyperbee'
 import b4a from 'b4a'
 import { trimKeySpace, getKeysFromTree } from '../split-range.js'
+import { createDB } from './helpers.mjs'
 
 const putInOrder = async (db, keys) =>
   keys.reduce((accum, k) =>
@@ -13,9 +11,7 @@ const putInOrder = async (db, keys) =>
 test('split-range', (t) => {
   t.test('gets only lower bound key when its the highest key', async (t) => {
     // Construct b-tree
-    const core = new Hypercore(RAM)
-    const db = new Hyperbee(core, { keyEncoding: 'utf-8' })
-    await db.ready()
+    const db = await createDB()
 
     const gteKey = 'key5'
     const range = { gte: b4a.from(gteKey), lt: b4a.from('keyzz') }
@@ -38,9 +34,7 @@ test('split-range', (t) => {
 
   t.test('transverses to child nodes even when parent node\'s key is below lower bound', async (t) => {
     // Construct b-tree
-    const core = new Hypercore(RAM)
-    const db = new Hyperbee(core, { keyEncoding: 'utf-8' })
-    await db.ready()
+    const db = await createDB()
 
     const gteKey = 'key5'
     const range = { gte: b4a.from(gteKey), lt: b4a.from('keyzz') }
@@ -69,9 +63,7 @@ test('split-range', (t) => {
 
   t.test('doesnt assume finding a key in bound means there is a child node', async (t) => {
     // Construct b-tree
-    const core = new Hypercore(RAM)
-    const db = new Hyperbee(core, { keyEncoding: 'utf-8' })
-    await db.ready()
+    const db = await createDB()
 
     const gteKey = 'key5'
     const range = { gte: b4a.from(gteKey), lt: b4a.from('keyzz') }
@@ -100,9 +92,7 @@ test('split-range', (t) => {
 
   t.test('doesnt assume finding a key in bound means there is a child node', async (t) => {
     // Construct b-tree
-    const core = new Hypercore(RAM)
-    const db = new Hyperbee(core, { keyEncoding: 'utf-8' })
-    await db.ready()
+    const db = await createDB()
 
     const gteKey = 'key5'
     const range = { gte: b4a.from(gteKey), lt: b4a.from('keyzz') }
@@ -129,9 +119,7 @@ test('split-range', (t) => {
 
   t.test('finds children keys when parent key is in bounds', async (t) => {
     // Construct b-tree
-    const core = new Hypercore(RAM)
-    const db = new Hyperbee(core, { keyEncoding: 'utf-8' })
-    await db.ready()
+    const db = await createDB()
 
     const gteKey = 'key0'
     const range = { gte: b4a.from(gteKey), lt: b4a.from('keyzz') }
