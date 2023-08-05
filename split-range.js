@@ -52,9 +52,6 @@ export async function * getNextKeyFromBTree (db, range, targetNumber) {
   const trimed = await trimKeySpace(db, range)
   const keys = await splitKeysFromBTree(db, trimed, targetNumber)
   d.results('keys length', keys.length)
-  const carry = Buffer.allocUnsafe(keys[0].byteLength).fill(0)
-  keys[0].copy(carry)
-  keys.push(trimed.lte)
   for (let i = 0; i < keys.length; i++) {
     yield keys[i]
   }

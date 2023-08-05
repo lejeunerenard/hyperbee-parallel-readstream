@@ -46,12 +46,12 @@ export default class HyperbeeParallel extends Hyperbee {
       delete rangeSplit.gt
       delete rangeSplit.gte
 
-      const gtX = firstRange ? 'gte' : 'gt'
+      const _gKey = firstRange ? 'gte' : 'gt'
       firstRange = false
-      rangeSplit[gtX] = carry
+      rangeSplit[_gKey] = carry
       rangeSplit.lte = higher
 
-      if (rangeSplit[gtX].compare(rangeSplit.lte) > 0) {
+      if (rangeSplit[_gKey].compare(rangeSplit.lte) > 0) {
         throw Error('wrong order')
       }
 
